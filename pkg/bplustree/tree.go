@@ -34,7 +34,7 @@ func NewBPlusTree(branchingFactor int) *BPlusTree {
 	bloomSize, hashFunctions := OptimalBloomFilterSize(1000, 0.01)
 
 	return &BPlusTree{
-		root:            NewLeafNode(),
+		root:            NewLeaf(),
 		branchingFactor: branchingFactor,
 		height:          1,
 		size:            0,
@@ -71,8 +71,8 @@ func (t *BPlusTree) Insert(key uint64) bool {
 // splitRoot handles splitting the root when it's full
 func (t *BPlusTree) splitRoot() {
 	oldRoot := t.root
-	t.root = NewInternalNode()
-	newRoot := t.root.(*InternalNodeImpl)
+	t.root = NewBranch()
+	newRoot := t.root.(*BranchImpl)
 	newRoot.SetChild(0, oldRoot)
 	t.splitChild(newRoot, 0)
 	t.height++
@@ -88,9 +88,9 @@ func (t *BPlusTree) updateBloomFilter(key uint64) {
 // insertNonFull inserts a key into a non-full node
 func (t *BPlusTree) insertNonFull(node Node, key uint64) bool {
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		return n.InsertKey(key)
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		// Find the child that should contain the key
 		childIndex := n.FindChildIndex(key)
 		child := n.Children()[childIndex]
@@ -112,13 +112,13 @@ func (t *BPlusTree) insertNonFull(node Node, key uint64) bool {
 }
 
 // splitChild splits a full child of an internal node
-func (t *BPlusTree) splitChild(parent *InternalNodeImpl, childIndex int) {
+func (t *BPlusTree) splitChild(parent *BranchImpl, childIndex int) {
 	child := parent.Children()[childIndex]
 
 	switch c := child.(type) {
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		// Split internal node
-		newChildImpl := NewInternalNode()
+		newChildImpl := NewBranch()
 		midIndex := t.branchingFactor/2 - 1
 		midKey := c.Keys()[midIndex]
 
@@ -133,9 +133,9 @@ func (t *BPlusTree) splitChild(parent *InternalNodeImpl, childIndex int) {
 		// Insert the new child into the parent
 		parent.InsertKeyWithChild(midKey, newChildImpl)
 
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		// Split leaf node
-		newLeafImpl := NewLeafNode()
+		newLeafImpl := NewLeaf()
 		midIndex := t.branchingFactor / 2
 
 		// Move keys to the new leaf
@@ -197,12 +197,12 @@ func (t *BPlusTree) recomputeBloomFilter() {
 // addKeysToBloomFilter adds all keys in the subtree rooted at node to the Bloom filter
 func (t *BPlusTree) addKeysToBloomFilter(node Node) {
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		// Add all keys in the leaf node to the Bloom filter
 		for _, key := range n.Keys() {
 			t.bloomFilter.Add(key)
 		}
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		// Recursively add keys from all children
 		for _, child := range n.Children() {
 			t.addKeysToBloomFilter(child)
@@ -213,9 +213,9 @@ func (t *BPlusTree) addKeysToBloomFilter(node Node) {
 // findLeaf finds the leaf node that should contain the key
 func (t *BPlusTree) findLeaf(node Node, key uint64) bool {
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		return n.Contains(key)
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		childIndex := n.FindChildIndex(key)
 		// Safety check to avoid index out of range
 		if childIndex >= len(n.Children()) {
@@ -257,12 +257,12 @@ func (t *BPlusTree) handleRootUnderflow() {
 func (t *BPlusTree) isEmptyInternalRoot() bool {
 	return t.root.Type() == Branch &&
 		len(t.root.Keys()) == 0 &&
-		len(t.root.(*InternalNodeImpl).Children()) > 0
+		len(t.root.(*BranchImpl).Children()) > 0
 }
 
 // promoteOnlyChild makes the only child of the root the new root
 func (t *BPlusTree) promoteOnlyChild() {
-	t.root = t.root.(*InternalNodeImpl).Children()[0]
+	t.root = t.root.(*BranchImpl).Children()[0]
 	t.height--
 }
 
@@ -277,9 +277,9 @@ func (t *BPlusTree) invalidateBloomFilter() {
 // Returns:
 // - deleted: true if the key was deleted
 // - keyToReplaceInParent: a key that needs to be replaced in the parent (for internal nodes)
-func (t *BPlusTree) deleteAndBalance(node Node, parent *InternalNodeImpl, parentChildIndex int, key uint64) (bool, uint64) {
+func (t *BPlusTree) deleteAndBalance(node Node, parent *BranchImpl, parentChildIndex int, key uint64) (bool, uint64) {
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		// Try to delete the key
 		if !n.DeleteKey(key) {
 			return false, 0
@@ -293,7 +293,7 @@ func (t *BPlusTree) deleteAndBalance(node Node, parent *InternalNodeImpl, parent
 		// Handle underflow by borrowing or merging
 		return true, t.balanceLeafNode(n, parent, parentChildIndex)
 
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		// Find the child that should contain the key
 		childIndex := n.FindChildIndex(key)
 		// Check if childIndex is valid
@@ -331,7 +331,7 @@ func (t *BPlusTree) deleteAndBalance(node Node, parent *InternalNodeImpl, parent
 
 // balanceLeafNode handles underflow in a leaf node by borrowing from siblings or merging
 // Returns a key that needs to be replaced in the parent (if any)
-func (t *BPlusTree) balanceLeafNode(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
+func (t *BPlusTree) balanceLeafNode(node *LeafImpl, parent *BranchImpl, nodeIndex int) uint64 {
 	// Safety check
 	if !t.isValidNodeIndex(parent, nodeIndex) {
 		return 0
@@ -348,17 +348,17 @@ func (t *BPlusTree) balanceLeafNode(node *LeafNodeImpl, parent *InternalNodeImpl
 }
 
 // isValidNodeIndex checks if the node index is valid
-func (t *BPlusTree) isValidNodeIndex(parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) isValidNodeIndex(parent *BranchImpl, nodeIndex int) bool {
 	return nodeIndex >= 0 && nodeIndex < len(parent.Children())
 }
 
 // tryBorrowFromRightLeaf attempts to borrow a key from the right sibling
-func (t *BPlusTree) tryBorrowFromRightLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) tryBorrowFromRightLeaf(node *LeafImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
 		return false
 	}
 
-	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafNodeImpl)
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafImpl)
 	if !ok {
 		return false
 	}
@@ -373,12 +373,12 @@ func (t *BPlusTree) tryBorrowFromRightLeaf(node *LeafNodeImpl, parent *InternalN
 }
 
 // tryBorrowFromLeftLeaf attempts to borrow a key from the left sibling
-func (t *BPlusTree) tryBorrowFromLeftLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) tryBorrowFromLeftLeaf(node *LeafImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
 		return false
 	}
 
-	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafNodeImpl)
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafImpl)
 	if !ok {
 		return false
 	}
@@ -397,7 +397,7 @@ func (t *BPlusTree) tryBorrowFromLeftLeaf(node *LeafNodeImpl, parent *InternalNo
 }
 
 // mergeLeafWithSibling merges the node with a sibling
-func (t *BPlusTree) mergeLeafWithSibling(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
+func (t *BPlusTree) mergeLeafWithSibling(node *LeafImpl, parent *BranchImpl, nodeIndex int) uint64 {
 	// Try to merge with left sibling first
 	if t.mergeWithLeftLeaf(node, parent, nodeIndex) {
 		return 0
@@ -413,12 +413,12 @@ func (t *BPlusTree) mergeLeafWithSibling(node *LeafNodeImpl, parent *InternalNod
 }
 
 // mergeWithLeftLeaf attempts to merge with the left sibling
-func (t *BPlusTree) mergeWithLeftLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) mergeWithLeftLeaf(node *LeafImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
 		return false
 	}
 
-	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafNodeImpl)
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafImpl)
 	if !ok {
 		return false
 	}
@@ -435,12 +435,12 @@ func (t *BPlusTree) mergeWithLeftLeaf(node *LeafNodeImpl, parent *InternalNodeIm
 }
 
 // mergeWithRightLeaf attempts to merge with the right sibling
-func (t *BPlusTree) mergeWithRightLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) mergeWithRightLeaf(node *LeafImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
 		return false
 	}
 
-	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafNodeImpl)
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafImpl)
 	if !ok {
 		return false
 	}
@@ -458,7 +458,7 @@ func (t *BPlusTree) mergeWithRightLeaf(node *LeafNodeImpl, parent *InternalNodeI
 
 // balanceInternalNode handles underflow in an internal node by borrowing from siblings or merging
 // Returns a key that needs to be replaced in the parent (if any)
-func (t *BPlusTree) balanceInternalNode(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
+func (t *BPlusTree) balanceInternalNode(node *BranchImpl, parent *BranchImpl, nodeIndex int) uint64 {
 	// Safety check
 	if !t.isValidNodeIndex(parent, nodeIndex) {
 		return 0
@@ -475,12 +475,12 @@ func (t *BPlusTree) balanceInternalNode(node *InternalNodeImpl, parent *Internal
 }
 
 // tryBorrowFromRightInternal attempts to borrow a key from the right sibling
-func (t *BPlusTree) tryBorrowFromRightInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) tryBorrowFromRightInternal(node *BranchImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
 		return false
 	}
 
-	rightSibling, ok := parent.Children()[nodeIndex+1].(*InternalNodeImpl)
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*BranchImpl)
 	if !ok {
 		return false
 	}
@@ -496,12 +496,12 @@ func (t *BPlusTree) tryBorrowFromRightInternal(node *InternalNodeImpl, parent *I
 }
 
 // tryBorrowFromLeftInternal attempts to borrow a key from the left sibling
-func (t *BPlusTree) tryBorrowFromLeftInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) tryBorrowFromLeftInternal(node *BranchImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
 		return false
 	}
 
-	leftSibling, ok := parent.Children()[nodeIndex-1].(*InternalNodeImpl)
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*BranchImpl)
 	if !ok {
 		return false
 	}
@@ -517,7 +517,7 @@ func (t *BPlusTree) tryBorrowFromLeftInternal(node *InternalNodeImpl, parent *In
 }
 
 // mergeInternalWithSibling merges the node with a sibling
-func (t *BPlusTree) mergeInternalWithSibling(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
+func (t *BPlusTree) mergeInternalWithSibling(node *BranchImpl, parent *BranchImpl, nodeIndex int) uint64 {
 	// Try to merge with left sibling first
 	if t.mergeWithLeftInternal(node, parent, nodeIndex) {
 		return 0
@@ -533,12 +533,12 @@ func (t *BPlusTree) mergeInternalWithSibling(node *InternalNodeImpl, parent *Int
 }
 
 // mergeWithLeftInternal attempts to merge with the left sibling
-func (t *BPlusTree) mergeWithLeftInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) mergeWithLeftInternal(node *BranchImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
 		return false
 	}
 
-	leftSibling, ok := parent.Children()[nodeIndex-1].(*InternalNodeImpl)
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*BranchImpl)
 	if !ok {
 		return false
 	}
@@ -554,12 +554,12 @@ func (t *BPlusTree) mergeWithLeftInternal(node *InternalNodeImpl, parent *Intern
 }
 
 // mergeWithRightInternal attempts to merge with the right sibling
-func (t *BPlusTree) mergeWithRightInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+func (t *BPlusTree) mergeWithRightInternal(node *BranchImpl, parent *BranchImpl, nodeIndex int) bool {
 	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
 		return false
 	}
 
-	rightSibling, ok := parent.Children()[nodeIndex+1].(*InternalNodeImpl)
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*BranchImpl)
 	if !ok {
 		return false
 	}
@@ -606,9 +606,9 @@ func (t *BPlusTree) CountKeys() int {
 // countKeysInNode counts the number of keys in a subtree rooted at node
 func (t *BPlusTree) countKeysInNode(node Node) int {
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		return len(n.Keys())
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		count := 0
 		for _, child := range n.Children() {
 			count += t.countKeysInNode(child)
@@ -633,9 +633,9 @@ func (t *BPlusTree) GetAllKeys() []uint64 {
 // collectKeys collects all keys in the subtree rooted at node
 func (t *BPlusTree) collectKeys(node Node, keys *[]uint64) {
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		*keys = append(*keys, n.Keys()...)
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		for _, child := range n.Children() {
 			t.collectKeys(child, keys)
 		}
@@ -645,7 +645,7 @@ func (t *BPlusTree) collectKeys(node Node, keys *[]uint64) {
 // DeleteAll deletes all keys from the tree
 func (t *BPlusTree) DeleteAll() {
 	// Reset the tree to an empty leaf node
-	t.root = NewLeafNode()
+	t.root = NewLeaf()
 	t.height = 1
 	t.size = 0
 

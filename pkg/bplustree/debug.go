@@ -16,11 +16,11 @@ func (t *BPlusTree) PrintTree() string {
 // printNode recursively prints a node and its children
 func (t *BPlusTree) printNode(sb *strings.Builder, node Node, level int) {
 	indent := strings.Repeat("  ", level)
-	
+
 	switch n := node.(type) {
-	case *LeafNodeImpl:
+	case *LeafImpl:
 		sb.WriteString(fmt.Sprintf("%sLeaf: %v\n", indent, n.Keys()))
-	case *InternalNodeImpl:
+	case *BranchImpl:
 		sb.WriteString(fmt.Sprintf("%sInternal: %v\n", indent, n.Keys()))
 		for i, child := range n.Children() {
 			if i > 0 {
