@@ -216,7 +216,10 @@ func (t *BPlusTree) Delete(key uint64) bool {
 	// Try to delete the key
 	deleted, _ := t.deleteAndBalance(t.root, nil, -1, key)
 	if deleted {
-		t.size--
+		// Decrement the size counter
+		if t.size > 0 {
+			t.size--
+		}
 
 		// If the root is an internal node with no keys, make its only child the new root
 		if t.root.Type() == InternalNode && len(t.root.Keys()) == 0 {
@@ -228,7 +231,9 @@ func (t *BPlusTree) Delete(key uint64) bool {
 		}
 
 		// Invalidate the Bloom filter since we've modified the tree
-		t.bloomFilter.Clear()
+		if t.bloomFilter != nil {
+			t.bloomFilter.Clear()
+		}
 	}
 	return deleted
 }
@@ -473,4 +478,102 @@ func (t *BPlusTree) SetCustomBloomFilter(filter interface{}) {
 func (t *BPlusTree) DisableBloomFilter() {
 	// Set a nil Bloom filter to disable it
 	t.bloomFilter = nil
+}
+
+// CountKeys returns the actual number of keys in the tree by traversing it
+func (t *BPlusTree) CountKeys() int {
+	return t.countKeysInNode(t.root)
+}
+
+// countKeysInNode counts the number of keys in a subtree rooted at node
+func (t *BPlusTree) countKeysInNode(node Node) int {
+	switch n := node.(type) {
+	case *LeafNodeImpl:
+		return len(n.Keys())
+	case *InternalNodeImpl:
+		count := 0
+		for _, child := range n.Children() {
+			count += t.countKeysInNode(child)
+		}
+		return count
+	}
+	return 0
+}
+
+// ResetSize resets the size counter to the actual number of keys in the tree
+func (t *BPlusTree) ResetSize() {
+	t.size = t.CountKeys()
+}
+
+// GetAllKeys returns all keys in the tree
+func (t *BPlusTree) GetAllKeys() []uint64 {
+	keys := make([]uint64, 0, t.size)
+	t.collectKeys(t.root, &keys)
+	return keys
+}
+
+// collectKeys collects all keys in the subtree rooted at node
+func (t *BPlusTree) collectKeys(node Node, keys *[]uint64) {
+	switch n := node.(type) {
+	case *LeafNodeImpl:
+		*keys = append(*keys, n.Keys()...)
+	case *InternalNodeImpl:
+		for _, child := range n.Children() {
+			t.collectKeys(child, keys)
+		}
+	}
+}
+
+// DeleteAll deletes all keys from the tree
+func (t *BPlusTree) DeleteAll() {
+	// Reset the tree to an empty leaf node
+	t.root = NewLeafNode()
+	t.height = 1
+	t.size = 0
+
+	// Invalidate the Bloom filter
+	if t.bloomFilter != nil {
+		t.bloomFilter.Clear()
+	}
+}
+
+// ForceDeleteKeys forcefully deletes all keys in the given slice
+func (t *BPlusTree) ForceDeleteKeys(keys []uint64) int {
+	// Get all keys currently in the tree
+	keysInTree := t.GetAllKeys()
+
+	// Create a map of keys to delete for O(1) lookup
+	keysToDelete := make(map[uint64]bool)
+	for _, key := range keys {
+		keysToDelete[key] = true
+	}
+
+	// Filter out keys that are not in the tree
+	keysToDeleteInTree := make([]uint64, 0)
+	for _, key := range keysInTree {
+		if keysToDelete[key] {
+			keysToDeleteInTree = append(keysToDeleteInTree, key)
+		}
+	}
+
+	// If there are no keys to delete, return 0
+	if len(keysToDeleteInTree) == 0 {
+		return 0
+	}
+
+	// If we need to delete all keys in the tree, use DeleteAll
+	if len(keysToDeleteInTree) == len(keysInTree) {
+		t.DeleteAll()
+		return len(keysToDeleteInTree)
+	}
+
+	// Otherwise, delete each key individually
+	deletedCount := 0
+	for _, key := range keysToDeleteInTree {
+		if t.Delete(key) {
+			deletedCount++
+		}
+	}
+
+	return deletedCount
 }
