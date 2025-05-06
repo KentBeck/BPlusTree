@@ -255,7 +255,7 @@ func (t *BPlusTree) handleRootUnderflow() {
 
 // isEmptyInternalRoot returns true if the root is an internal node with no keys
 func (t *BPlusTree) isEmptyInternalRoot() bool {
-	return t.root.Type() == InternalNode &&
+	return t.root.Type() == Branch &&
 		len(t.root.Keys()) == 0 &&
 		len(t.root.(*InternalNodeImpl).Children()) > 0
 }

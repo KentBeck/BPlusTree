@@ -8,8 +8,8 @@ import (
 type NodeType int
 
 const (
-	// InternalNode is a node that contains keys and pointers to other nodes
-	InternalNode NodeType = iota
+	// Branch is a node that contains keys and pointers to other nodes
+	Branch NodeType = iota
 	// LeafNode is a node that contains keys and values
 	LeafNode
 )
@@ -52,7 +52,7 @@ func NewInternalNode() *InternalNodeImpl {
 
 // Type returns the type of the node
 func (n *InternalNodeImpl) Type() NodeType {
-	return InternalNode
+	return Branch
 }
 
 // Keys returns the keys in the node
