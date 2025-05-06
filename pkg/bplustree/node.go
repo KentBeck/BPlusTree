@@ -34,6 +34,9 @@ type Node interface {
 	FindKey(key uint64) int
 	// Contains returns true if the node contains the key
 	Contains(key uint64) bool
+	// TryBorrowFromSibling attempts to borrow a key from a sibling
+	// Returns true if borrowing was successful
+	TryBorrowFromSibling(parent *BranchImpl, nodeIndex int, branchingFactor int) bool
 }
 
 // BranchImpl represents an internal node in the B+ tree
@@ -199,7 +202,7 @@ func (n *BranchImpl) BorrowFromRight(separatorKey uint64, rightSibling *BranchIm
 // BorrowFromLeft borrows a key and child from the left sibling
 // The separator key from the parent is moved down to this node
 // The rightmost key from the left sibling becomes the new separator in the parent
-func (n *BranchImpl) BorrowFromLeft(separatorKey uint64, leftSibling *BranchImpl, parentIndex int, parent *BranchImpl) {
+func (n *BranchImpl) BorrowFromLeft(separatorKey uint64, leftSibling *BranchImpl, nodeIndex int, parent *BranchImpl) {
 	// Insert the separator key at the beginning of this node's keys
 	n.keys = append([]uint64{separatorKey}, n.keys...)
 
@@ -208,11 +211,69 @@ func (n *BranchImpl) BorrowFromLeft(separatorKey uint64, leftSibling *BranchImpl
 	n.children = append([]Node{leftSibling.children[lastChildIndex]}, n.children...)
 
 	// Update the separator key in the parent
-	parent.keys[parentIndex-1] = leftSibling.keys[len(leftSibling.keys)-1]
+	parent.keys[nodeIndex-1] = leftSibling.keys[len(leftSibling.keys)-1]
 
 	// Remove the borrowed key and child from the left sibling
 	leftSibling.keys = leftSibling.keys[:len(leftSibling.keys)-1]
 	leftSibling.children = leftSibling.children[:len(leftSibling.children)-1]
+}
+
+// TryBorrowFromSibling attempts to borrow a key from a sibling
+// Returns true if borrowing was successful
+func (n *BranchImpl) TryBorrowFromSibling(parent *BranchImpl, nodeIndex int, branchingFactor int) bool {
+	// Try to borrow from right sibling first
+	if n.tryBorrowFromRight(parent, nodeIndex, branchingFactor) {
+		return true
+	}
+
+	// If that fails, try to borrow from left sibling
+	return n.tryBorrowFromLeft(parent, nodeIndex, branchingFactor)
+}
+
+// tryBorrowFromRight attempts to borrow a key from the right sibling
+func (n *BranchImpl) tryBorrowFromRight(parent *BranchImpl, nodeIndex int, branchingFactor int) bool {
+	// Check if right sibling exists and has enough keys
+	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
+		return false
+	}
+
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*BranchImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minInternalKeys(branchingFactor)
+	if len(rightSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	// Borrow from right sibling
+	separatorKey := parent.Keys()[nodeIndex]
+	n.BorrowFromRight(separatorKey, rightSibling, nodeIndex, parent)
+	return true
+}
+
+// tryBorrowFromLeft attempts to borrow a key from the left sibling
+func (n *BranchImpl) tryBorrowFromLeft(parent *BranchImpl, nodeIndex int, branchingFactor int) bool {
+	// Check if left sibling exists and has enough keys
+	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
+		return false
+	}
+
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*BranchImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minInternalKeys(branchingFactor)
+	if len(leftSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	// Borrow from left sibling
+	separatorKey := parent.Keys()[nodeIndex-1]
+	n.BorrowFromLeft(separatorKey, leftSibling, nodeIndex, parent)
+	return true
 }
 
 // LeafImpl represents a leaf node in the B+ tree
@@ -354,4 +415,64 @@ func (n *LeafImpl) BorrowFromLeft(leftSibling *LeafImpl) {
 
 	// Remove the borrowed key from the left sibling
 	leftSibling.keys = leftSibling.keys[:lastKeyIndex]
+}
+
+// TryBorrowFromSibling attempts to borrow a key from a sibling
+// Returns true if borrowing was successful
+func (n *LeafImpl) TryBorrowFromSibling(parent *BranchImpl, nodeIndex int, branchingFactor int) bool {
+	// Try to borrow from right sibling first
+	if n.tryBorrowFromRight(parent, nodeIndex, branchingFactor) {
+		return true
+	}
+
+	// If that fails, try to borrow from left sibling
+	return n.tryBorrowFromLeft(parent, nodeIndex, branchingFactor)
+}
+
+// tryBorrowFromRight attempts to borrow a key from the right sibling
+func (n *LeafImpl) tryBorrowFromRight(parent *BranchImpl, nodeIndex int, branchingFactor int) bool {
+	// Check if right sibling exists and has enough keys
+	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
+		return false
+	}
+
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minLeafKeys(branchingFactor)
+	if len(rightSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	// Borrow from right sibling
+	n.BorrowFromRight(rightSibling, nodeIndex, parent)
+	return true
+}
+
+// tryBorrowFromLeft attempts to borrow a key from the left sibling
+func (n *LeafImpl) tryBorrowFromLeft(parent *BranchImpl, nodeIndex int, branchingFactor int) bool {
+	// Check if left sibling exists and has enough keys
+	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
+		return false
+	}
+
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minLeafKeys(branchingFactor)
+	if len(leftSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	// Borrow from left sibling
+	n.BorrowFromLeft(leftSibling)
+	// Update the separator key in the parent
+	if len(n.Keys()) > 0 {
+		parent.keys[nodeIndex-1] = n.Keys()[0]
+	}
+	return true
 }

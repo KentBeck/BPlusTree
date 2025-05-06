@@ -338,8 +338,7 @@ func (t *BPlusTree) balanceLeafNode(node *LeafImpl, parent *BranchImpl, nodeInde
 	}
 
 	// Try borrowing from siblings
-	if t.tryBorrowFromRightLeaf(node, parent, nodeIndex) ||
-		t.tryBorrowFromLeftLeaf(node, parent, nodeIndex) {
+	if node.TryBorrowFromSibling(parent, nodeIndex, t.branchingFactor) {
 		return 0
 	}
 
@@ -350,50 +349,6 @@ func (t *BPlusTree) balanceLeafNode(node *LeafImpl, parent *BranchImpl, nodeInde
 // isValidNodeIndex checks if the node index is valid
 func (t *BPlusTree) isValidNodeIndex(parent *BranchImpl, nodeIndex int) bool {
 	return nodeIndex >= 0 && nodeIndex < len(parent.Children())
-}
-
-// tryBorrowFromRightLeaf attempts to borrow a key from the right sibling
-func (t *BPlusTree) tryBorrowFromRightLeaf(node *LeafImpl, parent *BranchImpl, nodeIndex int) bool {
-	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
-		return false
-	}
-
-	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafImpl)
-	if !ok {
-		return false
-	}
-
-	minKeys := minLeafKeys(t.branchingFactor)
-	if len(rightSibling.Keys()) <= minKeys {
-		return false
-	}
-
-	node.BorrowFromRight(rightSibling, nodeIndex, parent)
-	return true
-}
-
-// tryBorrowFromLeftLeaf attempts to borrow a key from the left sibling
-func (t *BPlusTree) tryBorrowFromLeftLeaf(node *LeafImpl, parent *BranchImpl, nodeIndex int) bool {
-	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
-		return false
-	}
-
-	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafImpl)
-	if !ok {
-		return false
-	}
-
-	minKeys := minLeafKeys(t.branchingFactor)
-	if len(leftSibling.Keys()) <= minKeys {
-		return false
-	}
-
-	node.BorrowFromLeft(leftSibling)
-	// Update the separator key in the parent
-	if len(node.Keys()) > 0 {
-		parent.keys[nodeIndex-1] = node.Keys()[0]
-	}
-	return true
 }
 
 // mergeLeafWithSibling merges the node with a sibling
@@ -465,55 +420,12 @@ func (t *BPlusTree) balanceInternalNode(node *BranchImpl, parent *BranchImpl, no
 	}
 
 	// Try borrowing from siblings
-	if t.tryBorrowFromRightInternal(node, parent, nodeIndex) ||
-		t.tryBorrowFromLeftInternal(node, parent, nodeIndex) {
+	if node.TryBorrowFromSibling(parent, nodeIndex, t.branchingFactor) {
 		return 0
 	}
 
 	// If borrowing failed, merge with a sibling
 	return t.mergeInternalWithSibling(node, parent, nodeIndex)
-}
-
-// tryBorrowFromRightInternal attempts to borrow a key from the right sibling
-func (t *BPlusTree) tryBorrowFromRightInternal(node *BranchImpl, parent *BranchImpl, nodeIndex int) bool {
-	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
-		return false
-	}
-
-	rightSibling, ok := parent.Children()[nodeIndex+1].(*BranchImpl)
-	if !ok {
-		return false
-	}
-
-	minKeys := minInternalKeys(t.branchingFactor)
-	if len(rightSibling.Keys()) <= minKeys {
-		return false
-	}
-
-	separatorKey := parent.Keys()[nodeIndex]
-	node.BorrowFromRight(separatorKey, rightSibling, nodeIndex, parent)
-	return true
-}
-
-// tryBorrowFromLeftInternal attempts to borrow a key from the left sibling
-func (t *BPlusTree) tryBorrowFromLeftInternal(node *BranchImpl, parent *BranchImpl, nodeIndex int) bool {
-	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
-		return false
-	}
-
-	leftSibling, ok := parent.Children()[nodeIndex-1].(*BranchImpl)
-	if !ok {
-		return false
-	}
-
-	minKeys := minInternalKeys(t.branchingFactor)
-	if len(leftSibling.Keys()) <= minKeys {
-		return false
-	}
-
-	separatorKey := parent.Keys()[nodeIndex-1]
-	node.BorrowFromLeft(separatorKey, leftSibling, nodeIndex, parent)
-	return true
 }
 
 // mergeInternalWithSibling merges the node with a sibling
