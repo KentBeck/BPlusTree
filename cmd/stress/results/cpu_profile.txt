@@ -1,0 +1,27 @@
+B+ Tree Deletion Stress Test
+============================
+Keys: 100000
+Batch Size: 10000
+Branching Factor: 256
+Random Seed: 1746507633692065000
+Verify Results: true
+Test Patterns: false
+
+Generating 100000 keys...
+
+Running deletion test with pattern: Random
+---------------------------------------
+Inserting 100000 keys...
+Insertion completed in 7.467584ms (13391211.94 keys/sec)
+Deleting 100000 keys with pattern Random...
+  Batch 10: Deleted 263/100000 keys in 517.208µs (19334581.06 keys/sec)
+  82460 keys left in the tree after normal deletion, using force delete...
+  Force deleted 82460 keys in 8.798916ms
+Deletion completed in 16.387541ms (5047920.25 keys/sec)
+Memory usage: 4.48 MB before, 2.89 MB after, 17592186044414.41 MB difference
+Verifying results...
+Verification completed in 8.086583ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0

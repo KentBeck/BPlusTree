@@ -1,0 +1,102 @@
+B+ Tree Deletion Stress Test
+============================
+Keys: 100000
+Batch Size: 10000
+Branching Factor: 64
+Random Seed: 1746507632486277000
+Verify Results: true
+Test Patterns: true
+
+Generating 100000 keys...
+
+Running deletion test with pattern: Random
+---------------------------------------
+Inserting 100000 keys...
+Insertion completed in 9.667459ms (10343979.74 keys/sec)
+Deleting 100000 keys with pattern Random...
+  Batch 10: Deleted 135/100000 keys in 401.042µs (24935044.21 keys/sec)
+  59930 keys left in the tree after normal deletion, using force delete...
+  Force deleted 59930 keys in 8.656333ms
+Deletion completed in 12.812208ms (4688106.84 keys/sec)
+Memory usage: 3.55 MB before, 1.77 MB after, 17592186044414.22 MB difference
+Verifying results...
+Verification completed in 6.981167ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Sequential
+---------------------------------------
+Inserting 100000 keys...
+Insertion completed in 2.75925ms (36241732.35 keys/sec)
+Deleting 100000 keys with pattern Sequential...
+  Batch 10: Deleted 64/100000 keys in 49.958µs (200168141.24 keys/sec)
+  64384 keys left in the tree after normal deletion, using force delete...
+  Force deleted 64384 keys in 6.345167ms
+Deletion completed in 8.503792ms (7578736.64 keys/sec)
+Memory usage: 3.55 MB before, 1.77 MB after, 17592186044414.22 MB difference
+Verifying results...
+Verification completed in 7.991541ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Reverse
+---------------------------------------
+Inserting 100000 keys...
+Insertion completed in 2.72475ms (36700614.74 keys/sec)
+Deleting 100000 keys with pattern Reverse...
+  Batch 10: Deleted 100000/100000 keys in 6.512625ms (1535479.17 keys/sec)
+Deletion completed in 74.713709ms (1338442.45 keys/sec)
+Memory usage: 3.55 MB before, 1.80 MB after, 17592186044414.25 MB difference
+Verifying results...
+Verification completed in 6.62675ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Alternating
+---------------------------------------
+Inserting 100000 keys...
+Insertion completed in 2.760875ms (36220401.14 keys/sec)
+Deleting 100000 keys with pattern Alternating...
+  Batch 10: Deleted 64/100000 keys in 40.542µs (246657786.99 keys/sec)
+  64384 keys left in the tree after normal deletion, using force delete...
+  Force deleted 64384 keys in 4.95525ms
+Deletion completed in 9.212875ms (6995427.59 keys/sec)
+Memory usage: 3.58 MB before, 1.80 MB after, 17592186044414.22 MB difference
+Verifying results...
+Verification completed in 6.346375ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Batches
+---------------------------------------
+Inserting 100000 keys...
+Insertion completed in 2.963292ms (33746252.48 keys/sec)
+Deleting 100000 keys with pattern Batches...
+  Batch 10: Deleted 64/100000 keys in 40.375µs (247678018.58 keys/sec)
+  64384 keys left in the tree after normal deletion, using force delete...
+  Force deleted 64384 keys in 4.943416ms
+Deletion completed in 6.575625ms (9801045.53 keys/sec)
+Memory usage: 3.59 MB before, 1.80 MB after, 17592186044414.22 MB difference
+Verifying results...
+Verification completed in 6.570083ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Results Summary
+==============
+Pattern      Tree Size    Insertion Time  Deletion Time   Keys/Second     Memory (MB)    
+Random       100000       9.667459ms      12.812208ms     4688106.84      1.77           
+Sequential   100000       2.75925ms       8.503792ms      7578736.64      1.77           
+Reverse      100000       2.72475ms       74.713709ms     1338442.45      1.80           
+Alternating  100000       2.760875ms      9.212875ms      6995427.59      1.80           
+Batches      100000       2.963292ms      6.575625ms      9801045.53      1.80           

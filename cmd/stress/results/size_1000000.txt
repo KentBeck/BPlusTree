@@ -1,0 +1,147 @@
+B+ Tree Deletion Stress Test
+============================
+Keys: 1000000
+Batch Size: 10000
+Branching Factor: 256
+Random Seed: 1746507630170162000
+Verify Results: true
+Test Patterns: true
+
+Generating 1000000 keys...
+
+Running deletion test with pattern: Random
+---------------------------------------
+Inserting 1000000 keys...
+Insertion completed in 34.364375ms (29099903.61 keys/sec)
+Deleting 1000000 keys with pattern Random...
+  Batch 10: Deleted 38/1000000 keys in 648.875µs (15411288.77 keys/sec)
+  Batch 20: Deleted 79/1000000 keys in 693.125µs (14427412.08 keys/sec)
+  Batch 30: Deleted 120/1000000 keys in 752.041µs (13297147.36 keys/sec)
+  Batch 40: Deleted 160/1000000 keys in 854µs (11709601.87 keys/sec)
+  Batch 50: Deleted 191/1000000 keys in 821.709µs (12169758.39 keys/sec)
+  Batch 60: Deleted 228/1000000 keys in 807.916µs (12377524.40 keys/sec)
+  Batch 70: Deleted 273/1000000 keys in 843.083µs (11861228.37 keys/sec)
+  Batch 80: Deleted 319/1000000 keys in 799.5µs (12507817.39 keys/sec)
+  Batch 90: Deleted 358/1000000 keys in 823.666µs (12140843.50 keys/sec)
+  Batch 100: Deleted 391/1000000 keys in 666.75µs (14998125.23 keys/sec)
+  932924 keys left in the tree after normal deletion, using force delete...
+  Force deleted 932924 keys in 101.198ms
+Deletion completed in 180.509292ms (5170454.05 keys/sec)
+Memory usage: 31.41 MB before, 15.52 MB after, 17592186044400.11 MB difference
+Verifying results...
+Verification completed in 104.793875ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Sequential
+---------------------------------------
+Inserting 1000000 keys...
+Insertion completed in 27.406417ms (36487805.03 keys/sec)
+Deleting 1000000 keys with pattern Sequential...
+  Batch 10: Deleted 256/1000000 keys in 592.25µs (16884761.50 keys/sec)
+  Batch 20: Deleted 256/1000000 keys in 481µs (20790020.79 keys/sec)
+  Batch 30: Deleted 256/1000000 keys in 461.667µs (21660634.18 keys/sec)
+  Batch 40: Deleted 256/1000000 keys in 486.375µs (20560267.28 keys/sec)
+  Batch 50: Deleted 256/1000000 keys in 476.75µs (20975353.96 keys/sec)
+  Batch 60: Deleted 256/1000000 keys in 477.75µs (20931449.50 keys/sec)
+  Batch 70: Deleted 256/1000000 keys in 527.291µs (18964860.01 keys/sec)
+  Batch 80: Deleted 256/1000000 keys in 473.333µs (21126775.44 keys/sec)
+  Batch 90: Deleted 256/1000000 keys in 486.333µs (20562042.88 keys/sec)
+  Batch 100: Deleted 256/1000000 keys in 52.166µs (191695740.52 keys/sec)
+  983104 keys left in the tree after normal deletion, using force delete...
+  Force deleted 983104 keys in 86.808541ms
+Deletion completed in 138.78825ms (7085326.03 keys/sec)
+Memory usage: 31.42 MB before, 15.52 MB after, 17592186044400.10 MB difference
+Verifying results...
+Verification completed in 94.395584ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Reverse
+---------------------------------------
+Inserting 1000000 keys...
+Insertion completed in 24.925541ms (40119490.29 keys/sec)
+Deleting 1000000 keys with pattern Reverse...
+  Batch 10: Deleted 100000/1000000 keys in 4.116333ms (2429346.70 keys/sec)
+  Batch 20: Deleted 200000/1000000 keys in 3.92675ms (2546635.26 keys/sec)
+  Batch 30: Deleted 300000/1000000 keys in 3.876542ms (2579618.64 keys/sec)
+  Batch 40: Deleted 400000/1000000 keys in 4.142916ms (2413758.81 keys/sec)
+  Batch 50: Deleted 500000/1000000 keys in 4.504083ms (2220207.75 keys/sec)
+  Batch 60: Deleted 600000/1000000 keys in 4.168209ms (2399111.94 keys/sec)
+  Batch 70: Deleted 700000/1000000 keys in 3.863ms (2588661.66 keys/sec)
+  Batch 80: Deleted 800000/1000000 keys in 3.9475ms (2533248.89 keys/sec)
+  Batch 90: Deleted 900000/1000000 keys in 4.898542ms (2041423.75 keys/sec)
+  Batch 100: Deleted 1000000/1000000 keys in 3.903875ms (2561557.43 keys/sec)
+Deletion completed in 409.0435ms (2444727.76 keys/sec)
+Memory usage: 31.42 MB before, 15.55 MB after, 17592186044400.13 MB difference
+Verifying results...
+Verification completed in 103.292709ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Alternating
+---------------------------------------
+Inserting 1000000 keys...
+Insertion completed in 25.801209ms (38757873.71 keys/sec)
+Deleting 1000000 keys with pattern Alternating...
+  Batch 10: Deleted 128/1000000 keys in 461µs (21691973.97 keys/sec)
+  Batch 20: Deleted 128/1000000 keys in 463.5µs (21574973.03 keys/sec)
+  Batch 30: Deleted 128/1000000 keys in 457.958µs (21836063.57 keys/sec)
+  Batch 40: Deleted 128/1000000 keys in 537.541µs (18603232.13 keys/sec)
+  Batch 50: Deleted 128/1000000 keys in 119.5µs (83682008.37 keys/sec)
+  Batch 60: Deleted 256/1000000 keys in 473.083µs (21137939.85 keys/sec)
+  Batch 70: Deleted 256/1000000 keys in 465.125µs (21499596.88 keys/sec)
+  Batch 80: Deleted 256/1000000 keys in 567.584µs (17618537.52 keys/sec)
+  Batch 90: Deleted 256/1000000 keys in 482.625µs (20720020.72 keys/sec)
+  Batch 100: Deleted 256/1000000 keys in 115.417µs (86642349.05 keys/sec)
+  983104 keys left in the tree after normal deletion, using force delete...
+  Force deleted 983104 keys in 94.289708ms
+Deletion completed in 143.027583ms (6875317.19 keys/sec)
+Memory usage: 31.44 MB before, 15.54 MB after, 17592186044400.10 MB difference
+Verifying results...
+Verification completed in 108.816542ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Running deletion test with pattern: Batches
+---------------------------------------
+Inserting 1000000 keys...
+Insertion completed in 24.738291ms (40423164.24 keys/sec)
+Deleting 1000000 keys with pattern Batches...
+  Batch 10: Deleted 256/1000000 keys in 470.417µs (21257735.16 keys/sec)
+  Batch 20: Deleted 256/1000000 keys in 497.709µs (20092061.83 keys/sec)
+  Batch 30: Deleted 256/1000000 keys in 454.167µs (22018332.46 keys/sec)
+  Batch 40: Deleted 256/1000000 keys in 472.042µs (21184555.61 keys/sec)
+  Batch 50: Deleted 256/1000000 keys in 536.458µs (18640788.28 keys/sec)
+  Batch 60: Deleted 256/1000000 keys in 499.541µs (20018376.87 keys/sec)
+  Batch 70: Deleted 256/1000000 keys in 479.959µs (20835113.00 keys/sec)
+  Batch 80: Deleted 256/1000000 keys in 470.792µs (21240802.73 keys/sec)
+  Batch 90: Deleted 256/1000000 keys in 533.792µs (18733888.86 keys/sec)
+  Batch 100: Deleted 256/1000000 keys in 46.709µs (214091502.71 keys/sec)
+  983104 keys left in the tree after normal deletion, using force delete...
+  Force deleted 983104 keys in 106.215084ms
+Deletion completed in 154.72675ms (6355462.13 keys/sec)
+Memory usage: 31.44 MB before, 15.54 MB after, 17592186044400.10 MB difference
+Verifying results...
+Verification completed in 100.272167ms
+Tree size (from Size() method): 0 (expected: 0)
+Actual key count (from traversal): 0
+Keys that should have been deleted but still exist: 0
+Keys that should exist but were deleted: 0
+
+Results Summary
+==============
+Pattern      Tree Size    Insertion Time  Deletion Time   Keys/Second     Memory (MB)    
+Random       1000000      34.364375ms     180.509292ms    5170454.05      15.52          
+Sequential   1000000      27.406417ms     138.78825ms     7085326.03      15.52          
+Reverse      1000000      24.925541ms     409.0435ms      2444727.76      15.55          
+Alternating  1000000      25.801209ms     143.027583ms    6875317.19      15.54          
+Batches      1000000      24.738291ms     154.72675ms     6355462.13      15.54          
