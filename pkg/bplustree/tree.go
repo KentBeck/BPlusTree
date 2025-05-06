@@ -24,21 +24,32 @@ type BPlusTree struct {
 
 // NewBPlusTree creates a new B+ tree with the given branching factor
 func NewBPlusTree(branchingFactor int) *BPlusTree {
+	return NewBPlusTreeWithOptions(branchingFactor, true)
+}
+
+// NewBPlusTreeWithOptions creates a new B+ tree with the given branching factor and bloom filter option
+func NewBPlusTreeWithOptions(branchingFactor int, useBloomFilter bool) *BPlusTree {
 	if branchingFactor < 3 {
 		branchingFactor = 3 // Minimum branching factor
 	}
 
-	// Create a Bloom filter with reasonable default parameters
-	// We'll use an expected capacity of 1000 elements and a false positive rate of 0.01
-	// These parameters can be tuned based on the expected usage
-	bloomSize, hashFunctions := OptimalBloomFilterSize(1000, 0.01)
+	var bloomFilter BloomFilterInterface
+	if useBloomFilter {
+		// Create a Bloom filter with reasonable default parameters
+		// We'll use an expected capacity of 1000 elements and a false positive rate of 0.01
+		bloomSize, hashFunctions := OptimalBloomFilterSize(1000, 0.01)
+		bloomFilter = NewBloomFilter(bloomSize, hashFunctions)
+	} else {
+		// Use a NullBloomFilter that always returns "maybe"
+		bloomFilter = NewNullBloomFilter()
+	}
 
 	return &BPlusTree{
 		root:            NewLeaf(),
 		branchingFactor: branchingFactor,
 		height:          1,
 		size:            0,
-		bloomFilter:     NewBloomFilter(bloomSize, hashFunctions),
+		bloomFilter:     bloomFilter,
 	}
 }
 
@@ -158,11 +169,6 @@ func (t *BPlusTree) splitChild(parent *BranchImpl, childIndex int) {
 
 // Contains returns true if the tree contains the key
 func (t *BPlusTree) Contains(key uint64) bool {
-	// Early return if bloom filter is disabled
-	if t.bloomFilter == nil {
-		return t.findLeaf(t.root, key)
-	}
-
 	// Ensure bloom filter is valid
 	if !t.bloomFilter.IsValid() {
 		t.recomputeBloomFilter()
@@ -179,11 +185,6 @@ func (t *BPlusTree) Contains(key uint64) bool {
 
 // recomputeBloomFilter recomputes the Bloom filter from all keys in the tree
 func (t *BPlusTree) recomputeBloomFilter() {
-	// If Bloom filter is disabled, do nothing
-	if t.bloomFilter == nil {
-		return
-	}
-
 	// Clear the Bloom filter
 	t.bloomFilter.Clear()
 
@@ -268,9 +269,7 @@ func (t *BPlusTree) promoteOnlyChild() {
 
 // invalidateBloomFilter clears the bloom filter
 func (t *BPlusTree) invalidateBloomFilter() {
-	if t.bloomFilter != nil {
-		t.bloomFilter.Clear()
-	}
+	t.bloomFilter.Clear()
 }
 
 // deleteAndBalance removes a key from a node and balances the tree if necessary
@@ -504,10 +503,10 @@ func (t *BPlusTree) SetCustomBloomFilter(filter interface{}) {
 	}
 }
 
-// DisableBloomFilter disables the Bloom filter by making Contains bypass it
+// DisableBloomFilter disables the Bloom filter by replacing it with a NullBloomFilter
 func (t *BPlusTree) DisableBloomFilter() {
-	// Set a nil Bloom filter to disable it
-	t.bloomFilter = nil
+	// Replace with a NullBloomFilter that always returns "maybe"
+	t.bloomFilter = NewNullBloomFilter()
 }
 
 // CountKeys returns the actual number of keys in the tree by traversing it
@@ -562,9 +561,7 @@ func (t *BPlusTree) DeleteAll() {
 	t.size = 0
 
 	// Invalidate the Bloom filter
-	if t.bloomFilter != nil {
-		t.bloomFilter.Clear()
-	}
+	t.bloomFilter.Clear()
 }
 
 // ForceDeleteKeys forcefully deletes all keys in the given slice

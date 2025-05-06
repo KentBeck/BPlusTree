@@ -121,3 +121,41 @@ func OptimalBloomFilterSize(expectedElements int, falsePositiveRate float64) (si
 
 	return size, hashFunctions
 }
+
+// NullBloomFilter is a null implementation of BloomFilterInterface that always answers "maybe"
+// It's used to replace explicit nil checks in the tree implementation
+type NullBloomFilter struct {
+	valid bool
+}
+
+// NewNullBloomFilter creates a new NullBloomFilter
+func NewNullBloomFilter() *NullBloomFilter {
+	return &NullBloomFilter{
+		valid: true,
+	}
+}
+
+// Add is a no-op in NullBloomFilter
+func (bf *NullBloomFilter) Add(key uint64) {
+	// Do nothing
+}
+
+// Contains always returns true in NullBloomFilter (meaning "maybe")
+func (bf *NullBloomFilter) Contains(key uint64) bool {
+	return true
+}
+
+// Clear is a no-op in NullBloomFilter
+func (bf *NullBloomFilter) Clear() {
+	// Do nothing
+}
+
+// SetValid marks the NullBloomFilter as valid
+func (bf *NullBloomFilter) SetValid() {
+	bf.valid = true
+}
+
+// IsValid returns true if the NullBloomFilter is valid
+func (bf *NullBloomFilter) IsValid() bool {
+	return bf.valid
+}
