@@ -20,6 +20,8 @@ type Node interface {
 	Type() NodeType
 	// Keys returns the keys in the node
 	Keys() []uint64
+	// KeyCount returns the number of keys in the node
+	KeyCount() int
 	// IsFull returns true if the node is full
 	IsFull(branchingFactor int) bool
 	// IsUnderflow returns true if the node has too few keys
@@ -30,6 +32,8 @@ type Node interface {
 	DeleteKey(key uint64) bool
 	// FindKey returns the index of the key in the node, or -1 if not found
 	FindKey(key uint64) int
+	// Contains returns true if the node contains the key
+	Contains(key uint64) bool
 }
 
 // InternalNodeImpl represents an internal node in the B+ tree
@@ -70,8 +74,17 @@ func (n *InternalNodeImpl) IsFull(branchingFactor int) bool {
 func (n *InternalNodeImpl) IsUnderflow(branchingFactor int) bool {
 	// For internal nodes, minimum number of keys is ceil(m/2)-1
 	// For branching factor 3, minimum is 1 key
-	minKeys := (branchingFactor+1)/2 - 1
-	return len(n.keys) < minKeys
+	return len(n.keys) < minInternalKeys(branchingFactor)
+}
+
+// KeyCount returns the number of keys in the node
+func (n *InternalNodeImpl) KeyCount() int {
+	return len(n.keys)
+}
+
+// Contains returns true if the node contains the key
+func (n *InternalNodeImpl) Contains(key uint64) bool {
+	return n.FindKey(key) != -1
 }
 
 // InsertKey inserts a key and child into the node at the correct position
@@ -245,8 +258,12 @@ func (n *LeafNodeImpl) IsFull(branchingFactor int) bool {
 func (n *LeafNodeImpl) IsUnderflow(branchingFactor int) bool {
 	// For leaf nodes, minimum number of keys is ceil(m/2)
 	// For branching factor 3, minimum is 2 keys
-	minKeys := (branchingFactor + 1) / 2
-	return len(n.keys) < minKeys
+	return len(n.keys) < minLeafKeys(branchingFactor)
+}
+
+// KeyCount returns the number of keys in the node
+func (n *LeafNodeImpl) KeyCount() int {
+	return len(n.keys)
 }
 
 // InsertKey inserts a key into the node

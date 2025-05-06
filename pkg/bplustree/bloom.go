@@ -1,6 +1,7 @@
 package bplustree
 
 import (
+	"hash"
 	"hash/fnv"
 	"math"
 )
@@ -76,25 +77,29 @@ func (bf *BloomFilter) IsValid() bool {
 // hash generates a hash value for a key using the FNV-1a hash function
 // with a seed based on the hash function index
 func (bf *BloomFilter) hash(key uint64, index int) uint64 {
+	return hashWithSeed(key, uint64(index+1))
+}
+
+// hashWithSeed generates a hash value for a key with a given seed
+func hashWithSeed(key uint64, seed uint64) uint64 {
 	h := fnv.New64a()
 
-	// Convert key to bytes
-	bytes := make([]byte, 8)
-	for i := 0; i < 8; i++ {
-		bytes[i] = byte(key >> (i * 8))
-	}
+	// Write seed bytes
+	writeUint64ToHash(h, seed)
 
-	// Add the hash function index as a seed
-	seed := uint64(index + 1)
-	seedBytes := make([]byte, 8)
-	for i := 0; i < 8; i++ {
-		seedBytes[i] = byte(seed >> (i * 8))
-	}
-
-	h.Write(seedBytes)
-	h.Write(bytes)
+	// Write key bytes
+	writeUint64ToHash(h, key)
 
 	return h.Sum64()
+}
+
+// writeUint64ToHash writes a uint64 value to a hash
+func writeUint64ToHash(h hash.Hash, value uint64) {
+	bytes := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		bytes[i] = byte(value >> (i * 8))
+	}
+	h.Write(bytes)
 }
 
 // OptimalBloomFilterSize calculates the optimal size for a Bloom filter

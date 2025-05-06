@@ -4,6 +4,15 @@ import (
 	"fmt"
 )
 
+// Helper functions for minimum key calculations
+func minInternalKeys(branchingFactor int) int {
+	return (branchingFactor+1)/2 - 1
+}
+
+func minLeafKeys(branchingFactor int) int {
+	return (branchingFactor + 1) / 2
+}
+
 // BPlusTree represents a B+ tree data structure
 type BPlusTree struct {
 	root            Node
@@ -45,27 +54,35 @@ func (t *BPlusTree) Height() int {
 
 // Insert inserts a key into the tree
 func (t *BPlusTree) Insert(key uint64) bool {
-	// Handle the case where the root is full
 	if t.root.IsFull(t.branchingFactor) {
-		oldRoot := t.root
-		t.root = NewInternalNode()
-		newRoot := t.root.(*InternalNodeImpl)
-		newRoot.SetChild(0, oldRoot)
-		t.splitChild(newRoot, 0)
-		t.height++
+		t.splitRoot()
 	}
 
-	// Insert the key
 	inserted := t.insertNonFull(t.root, key)
+
 	if inserted {
 		t.size++
-		// Add the key to the Bloom filter instead of invalidating it
-		// If the filter is not valid, we'll recompute it on the next Contains call
-		if t.bloomFilter != nil && t.bloomFilter.IsValid() {
-			t.bloomFilter.Add(key)
-		}
+		t.updateBloomFilter(key)
 	}
+
 	return inserted
+}
+
+// splitRoot handles splitting the root when it's full
+func (t *BPlusTree) splitRoot() {
+	oldRoot := t.root
+	t.root = NewInternalNode()
+	newRoot := t.root.(*InternalNodeImpl)
+	newRoot.SetChild(0, oldRoot)
+	t.splitChild(newRoot, 0)
+	t.height++
+}
+
+// updateBloomFilter adds a key to the bloom filter if it's valid
+func (t *BPlusTree) updateBloomFilter(key uint64) {
+	if t.bloomFilter != nil && t.bloomFilter.IsValid() {
+		t.bloomFilter.Add(key)
+	}
 }
 
 // insertNonFull inserts a key into a non-full node
@@ -141,24 +158,22 @@ func (t *BPlusTree) splitChild(parent *InternalNodeImpl, childIndex int) {
 
 // Contains returns true if the tree contains the key
 func (t *BPlusTree) Contains(key uint64) bool {
-	// If Bloom filter is disabled, go directly to tree traversal
+	// Early return if bloom filter is disabled
 	if t.bloomFilter == nil {
 		return t.findLeaf(t.root, key)
 	}
 
-	// Check if the Bloom filter is valid
+	// Ensure bloom filter is valid
 	if !t.bloomFilter.IsValid() {
-		// Recompute the Bloom filter from all keys
 		t.recomputeBloomFilter()
 	}
 
-	// Check if the key might be in the set using the Bloom filter
+	// Early return if bloom filter says key is definitely not present
 	if !t.bloomFilter.Contains(key) {
-		// If the Bloom filter says the key is definitely not in the set, return false
 		return false
 	}
 
-	// If the Bloom filter says the key might be in the set, check the tree
+	// Check the tree since bloom filter says key might be present
 	return t.findLeaf(t.root, key)
 }
 
@@ -213,29 +228,49 @@ func (t *BPlusTree) findLeaf(node Node, key uint64) bool {
 
 // Delete removes a key from the tree
 func (t *BPlusTree) Delete(key uint64) bool {
-	// Try to delete the key
 	deleted, _ := t.deleteAndBalance(t.root, nil, -1, key)
+
 	if deleted {
-		// Decrement the size counter
-		if t.size > 0 {
-			t.size--
-		}
-
-		// If the root is an internal node with no keys, make its only child the new root
-		if t.root.Type() == InternalNode && len(t.root.Keys()) == 0 {
-			internalRoot := t.root.(*InternalNodeImpl)
-			if len(internalRoot.Children()) > 0 {
-				t.root = internalRoot.Children()[0]
-				t.height--
-			}
-		}
-
-		// Invalidate the Bloom filter since we've modified the tree
-		if t.bloomFilter != nil {
-			t.bloomFilter.Clear()
-		}
+		t.decrementSize()
+		t.handleRootUnderflow()
+		t.invalidateBloomFilter()
 	}
+
 	return deleted
+}
+
+// decrementSize decrements the size counter if it's greater than 0
+func (t *BPlusTree) decrementSize() {
+	if t.size > 0 {
+		t.size--
+	}
+}
+
+// handleRootUnderflow handles the case where the root has no keys
+func (t *BPlusTree) handleRootUnderflow() {
+	if t.isEmptyInternalRoot() {
+		t.promoteOnlyChild()
+	}
+}
+
+// isEmptyInternalRoot returns true if the root is an internal node with no keys
+func (t *BPlusTree) isEmptyInternalRoot() bool {
+	return t.root.Type() == InternalNode &&
+		len(t.root.Keys()) == 0 &&
+		len(t.root.(*InternalNodeImpl).Children()) > 0
+}
+
+// promoteOnlyChild makes the only child of the root the new root
+func (t *BPlusTree) promoteOnlyChild() {
+	t.root = t.root.(*InternalNodeImpl).Children()[0]
+	t.height--
+}
+
+// invalidateBloomFilter clears the bloom filter
+func (t *BPlusTree) invalidateBloomFilter() {
+	if t.bloomFilter != nil {
+		t.bloomFilter.Clear()
+	}
 }
 
 // deleteAndBalance removes a key from a node and balances the tree if necessary
@@ -298,78 +333,78 @@ func (t *BPlusTree) deleteAndBalance(node Node, parent *InternalNodeImpl, parent
 // Returns a key that needs to be replaced in the parent (if any)
 func (t *BPlusTree) balanceLeafNode(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
 	// Safety check
-	if nodeIndex < 0 || nodeIndex >= len(parent.Children()) {
+	if !t.isValidNodeIndex(parent, nodeIndex) {
 		return 0
 	}
 
-	// Try to borrow from right sibling
-	if nodeIndex < len(parent.Children())-1 && nodeIndex < len(parent.Keys()) {
-		rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafNodeImpl)
-		if !ok {
-			return 0
-		}
-
-		// Check if right sibling can spare a key
-		minKeys := (t.branchingFactor + 1) / 2
-		if len(rightSibling.Keys()) > minKeys {
-			node.BorrowFromRight(rightSibling, nodeIndex, parent)
-			return 0
-		}
-	}
-
-	// Try to borrow from left sibling
-	if nodeIndex > 0 && nodeIndex-1 < len(parent.Keys()) {
-		leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafNodeImpl)
-		if !ok {
-			return 0
-		}
-
-		// Check if left sibling can spare a key
-		minKeys := (t.branchingFactor + 1) / 2
-		if len(leftSibling.Keys()) > minKeys {
-			node.BorrowFromLeft(leftSibling)
-			// Update the separator key in the parent
-			if len(node.Keys()) > 0 {
-				parent.keys[nodeIndex-1] = node.Keys()[0]
-			}
-			return 0
-		}
-	}
-
-	// Merge with a sibling
-	// Prefer merging with left sibling
-	if nodeIndex > 0 && nodeIndex-1 < len(parent.Keys()) {
-		leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafNodeImpl)
-		if !ok {
-			return 0
-		}
-
-		leftSibling.MergeWith(node)
-
-		// Remove the separator key and the right child pointer from the parent
-		if nodeIndex-1 < len(parent.Keys()) {
-			parent.DeleteKey(parent.Keys()[nodeIndex-1])
-			parent.RemoveChild(nodeIndex)
-		}
-
+	// Try borrowing from siblings
+	if t.tryBorrowFromRightLeaf(node, parent, nodeIndex) ||
+		t.tryBorrowFromLeftLeaf(node, parent, nodeIndex) {
 		return 0
 	}
 
-	// Merge with right sibling
-	if nodeIndex < len(parent.Children())-1 && nodeIndex < len(parent.Keys()) {
-		rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafNodeImpl)
-		if !ok {
-			return 0
-		}
+	// If borrowing failed, merge with a sibling
+	return t.mergeLeafWithSibling(node, parent, nodeIndex)
+}
 
-		node.MergeWith(rightSibling)
+// isValidNodeIndex checks if the node index is valid
+func (t *BPlusTree) isValidNodeIndex(parent *InternalNodeImpl, nodeIndex int) bool {
+	return nodeIndex >= 0 && nodeIndex < len(parent.Children())
+}
 
-		// Remove the separator key and the right child pointer from the parent
-		if nodeIndex < len(parent.Keys()) {
-			parent.DeleteKey(parent.Keys()[nodeIndex])
-			parent.RemoveChild(nodeIndex + 1)
-		}
+// tryBorrowFromRightLeaf attempts to borrow a key from the right sibling
+func (t *BPlusTree) tryBorrowFromRightLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
+		return false
+	}
 
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafNodeImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minLeafKeys(t.branchingFactor)
+	if len(rightSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	node.BorrowFromRight(rightSibling, nodeIndex, parent)
+	return true
+}
+
+// tryBorrowFromLeftLeaf attempts to borrow a key from the left sibling
+func (t *BPlusTree) tryBorrowFromLeftLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
+		return false
+	}
+
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafNodeImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minLeafKeys(t.branchingFactor)
+	if len(leftSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	node.BorrowFromLeft(leftSibling)
+	// Update the separator key in the parent
+	if len(node.Keys()) > 0 {
+		parent.keys[nodeIndex-1] = node.Keys()[0]
+	}
+	return true
+}
+
+// mergeLeafWithSibling merges the node with a sibling
+func (t *BPlusTree) mergeLeafWithSibling(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
+	// Try to merge with left sibling first
+	if t.mergeWithLeftLeaf(node, parent, nodeIndex) {
+		return 0
+	}
+
+	// If that fails, try to merge with right sibling
+	if t.mergeWithRightLeaf(node, parent, nodeIndex) {
 		return 0
 	}
 
@@ -377,83 +412,166 @@ func (t *BPlusTree) balanceLeafNode(node *LeafNodeImpl, parent *InternalNodeImpl
 	return 0
 }
 
+// mergeWithLeftLeaf attempts to merge with the left sibling
+func (t *BPlusTree) mergeWithLeftLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
+		return false
+	}
+
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*LeafNodeImpl)
+	if !ok {
+		return false
+	}
+
+	leftSibling.MergeWith(node)
+
+	// Remove the separator key and the right child pointer from the parent
+	if nodeIndex-1 < len(parent.Keys()) {
+		parent.DeleteKey(parent.Keys()[nodeIndex-1])
+		parent.RemoveChild(nodeIndex)
+	}
+
+	return true
+}
+
+// mergeWithRightLeaf attempts to merge with the right sibling
+func (t *BPlusTree) mergeWithRightLeaf(node *LeafNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
+		return false
+	}
+
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*LeafNodeImpl)
+	if !ok {
+		return false
+	}
+
+	node.MergeWith(rightSibling)
+
+	// Remove the separator key and the right child pointer from the parent
+	if nodeIndex < len(parent.Keys()) {
+		parent.DeleteKey(parent.Keys()[nodeIndex])
+		parent.RemoveChild(nodeIndex + 1)
+	}
+
+	return true
+}
+
 // balanceInternalNode handles underflow in an internal node by borrowing from siblings or merging
 // Returns a key that needs to be replaced in the parent (if any)
 func (t *BPlusTree) balanceInternalNode(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
 	// Safety check
-	if nodeIndex < 0 || nodeIndex >= len(parent.Children()) {
+	if !t.isValidNodeIndex(parent, nodeIndex) {
 		return 0
 	}
 
-	// Try to borrow from right sibling
-	if nodeIndex < len(parent.Children())-1 && nodeIndex < len(parent.Keys()) {
-		rightSibling, ok := parent.Children()[nodeIndex+1].(*InternalNodeImpl)
-		if !ok {
-			return 0
-		}
-
-		// Check if right sibling can spare a key
-		minKeys := (t.branchingFactor+1)/2 - 1
-		if len(rightSibling.Keys()) > minKeys {
-			separatorKey := parent.Keys()[nodeIndex]
-			node.BorrowFromRight(separatorKey, rightSibling, nodeIndex, parent)
-			return 0
-		}
-	}
-
-	// Try to borrow from left sibling
-	if nodeIndex > 0 && nodeIndex-1 < len(parent.Keys()) {
-		leftSibling, ok := parent.Children()[nodeIndex-1].(*InternalNodeImpl)
-		if !ok {
-			return 0
-		}
-
-		// Check if left sibling can spare a key
-		minKeys := (t.branchingFactor+1)/2 - 1
-		if len(leftSibling.Keys()) > minKeys {
-			separatorKey := parent.Keys()[nodeIndex-1]
-			node.BorrowFromLeft(separatorKey, leftSibling, nodeIndex, parent)
-			return 0
-		}
-	}
-
-	// Merge with a sibling
-	// Prefer merging with left sibling
-	if nodeIndex > 0 && nodeIndex-1 < len(parent.Keys()) {
-		leftSibling, ok := parent.Children()[nodeIndex-1].(*InternalNodeImpl)
-		if !ok {
-			return 0
-		}
-
-		separatorKey := parent.Keys()[nodeIndex-1]
-		leftSibling.MergeWith(separatorKey, node)
-
-		// Remove the separator key and the right child pointer from the parent
-		parent.DeleteKey(separatorKey)
-		parent.RemoveChild(nodeIndex)
-
+	// Try borrowing from siblings
+	if t.tryBorrowFromRightInternal(node, parent, nodeIndex) ||
+		t.tryBorrowFromLeftInternal(node, parent, nodeIndex) {
 		return 0
 	}
 
-	// Merge with right sibling
-	if nodeIndex < len(parent.Children())-1 && nodeIndex < len(parent.Keys()) {
-		rightSibling, ok := parent.Children()[nodeIndex+1].(*InternalNodeImpl)
-		if !ok {
-			return 0
-		}
+	// If borrowing failed, merge with a sibling
+	return t.mergeInternalWithSibling(node, parent, nodeIndex)
+}
 
-		separatorKey := parent.Keys()[nodeIndex]
-		node.MergeWith(separatorKey, rightSibling)
+// tryBorrowFromRightInternal attempts to borrow a key from the right sibling
+func (t *BPlusTree) tryBorrowFromRightInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
+		return false
+	}
 
-		// Remove the separator key and the right child pointer from the parent
-		parent.DeleteKey(separatorKey)
-		parent.RemoveChild(nodeIndex + 1)
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*InternalNodeImpl)
+	if !ok {
+		return false
+	}
 
+	minKeys := minInternalKeys(t.branchingFactor)
+	if len(rightSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	separatorKey := parent.Keys()[nodeIndex]
+	node.BorrowFromRight(separatorKey, rightSibling, nodeIndex, parent)
+	return true
+}
+
+// tryBorrowFromLeftInternal attempts to borrow a key from the left sibling
+func (t *BPlusTree) tryBorrowFromLeftInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
+		return false
+	}
+
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*InternalNodeImpl)
+	if !ok {
+		return false
+	}
+
+	minKeys := minInternalKeys(t.branchingFactor)
+	if len(leftSibling.Keys()) <= minKeys {
+		return false
+	}
+
+	separatorKey := parent.Keys()[nodeIndex-1]
+	node.BorrowFromLeft(separatorKey, leftSibling, nodeIndex, parent)
+	return true
+}
+
+// mergeInternalWithSibling merges the node with a sibling
+func (t *BPlusTree) mergeInternalWithSibling(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) uint64 {
+	// Try to merge with left sibling first
+	if t.mergeWithLeftInternal(node, parent, nodeIndex) {
+		return 0
+	}
+
+	// If that fails, try to merge with right sibling
+	if t.mergeWithRightInternal(node, parent, nodeIndex) {
 		return 0
 	}
 
 	// This should never happen
 	return 0
+}
+
+// mergeWithLeftInternal attempts to merge with the left sibling
+func (t *BPlusTree) mergeWithLeftInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex <= 0 || nodeIndex-1 >= len(parent.Keys()) {
+		return false
+	}
+
+	leftSibling, ok := parent.Children()[nodeIndex-1].(*InternalNodeImpl)
+	if !ok {
+		return false
+	}
+
+	separatorKey := parent.Keys()[nodeIndex-1]
+	leftSibling.MergeWith(separatorKey, node)
+
+	// Remove the separator key and the right child pointer from the parent
+	parent.DeleteKey(separatorKey)
+	parent.RemoveChild(nodeIndex)
+
+	return true
+}
+
+// mergeWithRightInternal attempts to merge with the right sibling
+func (t *BPlusTree) mergeWithRightInternal(node *InternalNodeImpl, parent *InternalNodeImpl, nodeIndex int) bool {
+	if nodeIndex >= len(parent.Children())-1 || nodeIndex >= len(parent.Keys()) {
+		return false
+	}
+
+	rightSibling, ok := parent.Children()[nodeIndex+1].(*InternalNodeImpl)
+	if !ok {
+		return false
+	}
+
+	separatorKey := parent.Keys()[nodeIndex]
+	node.MergeWith(separatorKey, rightSibling)
+
+	// Remove the separator key and the right child pointer from the parent
+	parent.DeleteKey(separatorKey)
+	parent.RemoveChild(nodeIndex + 1)
+
+	return true
 }
 
 // String returns a string representation of the tree
