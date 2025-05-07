@@ -7,7 +7,7 @@ import (
 // TestGenericBPlusTreeBasicOperations tests the basic operations of the generic B+ tree
 func TestGenericBPlusTreeBasicOperations(t *testing.T) {
 	// Create a tree with a small branching factor for easier testing
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -109,7 +109,7 @@ func TestGenericBPlusTreeBasicOperations(t *testing.T) {
 
 // TestGenericBPlusTreeRangeQuery tests the range query functionality
 func TestGenericBPlusTreeRangeQuery(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -166,7 +166,7 @@ func TestGenericBPlusTreeRangeQuery(t *testing.T) {
 
 // TestGenericBPlusTreeWithoutBloom tests the tree without a bloom filter
 func TestGenericBPlusTreeWithoutBloom(t *testing.T) {
-	tree := NewGenericBPlusTreeWithoutBloom[int](
+	tree := NewGenericBPlusTreeWithoutBloom(
 		4,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -202,7 +202,7 @@ func TestGenericBPlusTreeLargeDataset(t *testing.T) {
 		t.Skip("Skipping large dataset test in short mode")
 	}
 
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		128, // Larger branching factor for better performance
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -264,7 +264,7 @@ func TestGenericBPlusTreeLargeDataset(t *testing.T) {
 // TestGenericBPlusTreeBloomFilterOptimization tests the bloom filter optimization
 func TestGenericBPlusTreeBloomFilterOptimization(t *testing.T) {
 	// Create a tree with bloom filter
-	treeWithBloom := NewGenericBPlusTree[int](
+	treeWithBloom := NewGenericBPlusTree(
 		16,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -272,7 +272,7 @@ func TestGenericBPlusTreeBloomFilterOptimization(t *testing.T) {
 	)
 
 	// Create a tree without bloom filter
-	treeWithoutBloom := NewGenericBPlusTreeWithoutBloom[int](
+	treeWithoutBloom := NewGenericBPlusTreeWithoutBloom(
 		16,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },

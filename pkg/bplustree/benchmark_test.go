@@ -18,7 +18,7 @@ func BenchmarkOriginalBPlusTreeInsert(b *testing.B) {
 
 // BenchmarkGenericBPlusTreeInsert benchmarks the insertion of keys into the generic B+ tree
 func BenchmarkGenericBPlusTreeInsert(b *testing.B) {
-	tree := NewGenericBPlusTree[uint64](
+	tree := NewGenericBPlusTree(
 		256,
 		func(a, b uint64) bool { return a < b },
 		func(a, b uint64) bool { return a == b },
@@ -55,7 +55,7 @@ func BenchmarkOriginalBPlusTreeContains(b *testing.B) {
 
 // BenchmarkGenericBPlusTreeContains benchmarks the lookup of keys in the generic B+ tree
 func BenchmarkGenericBPlusTreeContains(b *testing.B) {
-	tree := NewGenericBPlusTree[uint64](
+	tree := NewGenericBPlusTree(
 		256,
 		func(a, b uint64) bool { return a < b },
 		func(a, b uint64) bool { return a == b },
@@ -100,7 +100,7 @@ func BenchmarkOriginalBPlusTreeContainsNonExistent(b *testing.B) {
 
 // BenchmarkGenericBPlusTreeContainsNonExistent benchmarks the lookup of non-existent keys in the generic B+ tree
 func BenchmarkGenericBPlusTreeContainsNonExistent(b *testing.B) {
-	tree := NewGenericBPlusTree[uint64](
+	tree := NewGenericBPlusTree(
 		256,
 		func(a, b uint64) bool { return a < b },
 		func(a, b uint64) bool { return a == b },
@@ -124,7 +124,7 @@ func BenchmarkGenericBPlusTreeContainsNonExistent(b *testing.B) {
 
 // BenchmarkGenericBPlusTreeRangeQuery benchmarks the range query in the generic B+ tree
 func BenchmarkGenericBPlusTreeRangeQuery(b *testing.B) {
-	tree := NewGenericBPlusTree[uint64](
+	tree := NewGenericBPlusTree(
 		256,
 		func(a, b uint64) bool { return a < b },
 		func(a, b uint64) bool { return a == b },

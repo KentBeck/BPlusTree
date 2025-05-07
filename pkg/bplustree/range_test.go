@@ -7,7 +7,7 @@ import (
 // TestRangeQuery tests the range query functionality of the generic B+ tree
 func TestRangeQuery(t *testing.T) {
 	// Create a tree with integers
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },

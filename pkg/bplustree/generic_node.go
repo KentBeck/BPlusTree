@@ -1,5 +1,13 @@
 package bplustree
 
+// NodeType represents the type of node (leaf or branch)
+type NodeType int
+
+const (
+	Leaf NodeType = iota
+	Branch
+)
+
 // GenericNode is a generic interface for nodes in the B+ tree
 type GenericNode[K any] interface {
 	// Type returns the type of the node

@@ -6,7 +6,7 @@ import (
 
 // TestGenericBPlusTreeEmptyTree tests operations on an empty tree
 func TestGenericBPlusTreeEmptyTree(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -47,7 +47,7 @@ func TestGenericBPlusTreeEmptyTree(t *testing.T) {
 
 // TestGenericBPlusTreeSingleElement tests operations on a tree with a single element
 func TestGenericBPlusTreeSingleElement(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -99,7 +99,7 @@ func TestGenericBPlusTreeSingleElement(t *testing.T) {
 
 // TestGenericBPlusTreeSplitRoot tests the root splitting
 func TestGenericBPlusTreeSplitRoot(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		3, // Small branching factor to force splits
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -140,7 +140,7 @@ func TestGenericBPlusTreeSplitRoot(t *testing.T) {
 
 // TestGenericBPlusTreeMultipleSplits tests multiple node splits
 func TestGenericBPlusTreeMultipleSplits(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		3, // Small branching factor to force splits
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -170,7 +170,7 @@ func TestGenericBPlusTreeMultipleSplits(t *testing.T) {
 
 // TestGenericBPlusTreeDeleteAndMerge tests deletion with node merging
 func TestGenericBPlusTreeDeleteAndMerge(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		3, // Small branching factor to force merges
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -216,7 +216,7 @@ func TestGenericBPlusTreeDeleteAndMerge(t *testing.T) {
 
 // TestGenericBPlusTreeBorrowFromSibling tests borrowing during deletion
 func TestGenericBPlusTreeBorrowFromSibling(t *testing.T) {
-	tree := NewGenericBPlusTree[int](
+	tree := NewGenericBPlusTree(
 		3, // Small branching factor to force borrowing
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -259,7 +259,7 @@ func TestGenericBPlusTreeBorrowFromSibling(t *testing.T) {
 
 // TestGenericBPlusTreeStringType tests the tree with string keys
 func TestGenericBPlusTreeStringType(t *testing.T) {
-	tree := NewGenericBPlusTree[string](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b string) bool { return a < b },
 		func(a, b string) bool { return a == b },
@@ -305,7 +305,7 @@ func TestGenericBPlusTreeCustomType(t *testing.T) {
 		Name string
 	}
 
-	tree := NewGenericBPlusTree[Person](
+	tree := NewGenericBPlusTree(
 		4,
 		func(a, b Person) bool { return a.ID < b.ID },
 		func(a, b Person) bool { return a.ID == b.ID },

@@ -25,7 +25,7 @@ func NewGenericSet[K comparable](
 
 // NewUint64Set creates a new set for uint64 values
 func NewUint64Set(branchingFactor int) *GenericSet[uint64] {
-	return NewGenericSet[uint64](
+	return NewGenericSet(
 		branchingFactor,
 		func(a, b uint64) bool { return a < b },
 		func(a, b uint64) bool { return a == b },
@@ -35,7 +35,7 @@ func NewUint64Set(branchingFactor int) *GenericSet[uint64] {
 
 // NewIntSet creates a new set for int values
 func NewIntSet(branchingFactor int) *GenericSet[int] {
-	return NewGenericSet[int](
+	return NewGenericSet(
 		branchingFactor,
 		func(a, b int) bool { return a < b },
 		func(a, b int) bool { return a == b },
@@ -54,7 +54,7 @@ func NewStringSet(branchingFactor int) *GenericSet[string] {
 		return hash
 	}
 
-	return NewGenericSet[string](
+	return NewGenericSet(
 		branchingFactor,
 		func(a, b string) bool { return a < b },
 		func(a, b string) bool { return a == b },
