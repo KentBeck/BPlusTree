@@ -190,6 +190,8 @@ func TestGenericSetString(t *testing.T) {
 			// This is just a placeholder
 			return ""
 		},
+		func(a, b string) bool { return a < b },
+		func(a, b string) bool { return a == b },
 	)
 
 	// Add some values
