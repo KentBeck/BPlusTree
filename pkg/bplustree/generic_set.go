@@ -5,14 +5,14 @@ import (
 )
 
 // GenericSet represents a set of values of type K implemented using a generic B+ tree
-// K can be any type that supports comparison
-type GenericSet[K any] struct {
+// K must be a comparable type
+type GenericSet[K comparable] struct {
 	tree *GenericBPlusTree[K]
 }
 
 // NewGenericSet creates a new set with the given branching factor
 // and comparison functions
-func NewGenericSet[K any](
+func NewGenericSet[K comparable](
 	branchingFactor int,
 	less func(a, b K) bool,
 	equal func(a, b K) bool,

@@ -60,8 +60,11 @@ func (n *GenericLeafNode[K]) InsertKey(key K, less func(a, b K) bool) bool {
 	pos := n.findInsertPosition(key, less)
 
 	// Check if key already exists
-	if pos < len(n.keys) && !less(n.keys[pos], key) && !less(key, n.keys[pos]) {
-		return false // Key already exists
+	if pos < len(n.keys) {
+		// If neither key < n.keys[pos] nor n.keys[pos] < key, then they must be equal
+		if !less(key, n.keys[pos]) && !less(n.keys[pos], key) {
+			return false // Key already exists
+		}
 	}
 
 	// Insert key

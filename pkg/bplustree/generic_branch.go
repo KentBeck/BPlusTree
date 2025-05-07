@@ -114,6 +114,14 @@ func (n *GenericBranchNode[K]) Contains(key K, equal func(a, b K) bool) bool {
 
 // FindChildIndex returns the index of the child that should contain the key
 func (n *GenericBranchNode[K]) FindChildIndex(key K, less func(a, b K) bool) int {
+	// Special case for empty node
+	if len(n.keys) == 0 {
+		if len(n.children) > 0 {
+			return 0
+		}
+		return 0 // This should not happen in a properly structured tree
+	}
+
 	// Find the position using binary search
 	pos := sort.Search(len(n.keys), func(i int) bool {
 		return !less(n.keys[i], key) // equivalent to n.keys[i] >= key
@@ -126,6 +134,10 @@ func (n *GenericBranchNode[K]) FindChildIndex(key K, less func(a, b K) bool) int
 
 	// If the key at pos is equal to the search key, return the child to the right
 	// Otherwise, return the child at pos
+	if !less(key, n.keys[pos]) && !less(n.keys[pos], key) {
+		// Keys are equal, go to the right child
+		return pos + 1
+	}
 	return pos
 }
 

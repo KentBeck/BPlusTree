@@ -6,7 +6,7 @@ import (
 )
 
 // PrintTree prints a visual representation of the tree
-func PrintTree[K any](t *GenericBPlusTree[K]) string {
+func PrintTree[K comparable](t *GenericBPlusTree[K]) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Tree(size=%d, height=%d, branching=%d)\n", t.size, t.Height(), t.branchingFactor))
 	printNode(&sb, t.root, 0)

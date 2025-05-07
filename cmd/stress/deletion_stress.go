@@ -163,8 +163,13 @@ func runDeletionTest(keys []uint64, pattern DeletionPattern) TestResult {
 	fmt.Printf("\nRunning deletion test with pattern: %s\n", pattern)
 	fmt.Printf("---------------------------------------\n")
 
-	// Create a new tree
-	tree := bplustree.NewBPlusTree(*branchingFactor)
+	// Create a new tree with the generic implementation
+	tree := bplustree.NewGenericBPlusTree[uint64](
+		*branchingFactor,
+		func(a, b uint64) bool { return a < b },
+		func(a, b uint64) bool { return a == b },
+		func(v uint64) uint64 { return v },
+	)
 
 	// Insert all keys
 	fmt.Printf("Inserting %d keys...\n", len(keys))
