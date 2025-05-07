@@ -519,12 +519,6 @@ func (t *BPlusTree) SetCustomBloomFilter(filter interface{}) {
 	}
 }
 
-// DisableBloomFilter disables the Bloom filter by replacing it with a NullBloomFilter
-func (t *BPlusTree) DisableBloomFilter() {
-	// Replace with a NullBloomFilter that always returns "maybe"
-	t.bloomFilter = NewNullBloomFilter()
-}
-
 // CountKeys returns the actual number of keys in the tree by traversing it
 func (t *BPlusTree) CountKeys() int {
 	return t.countKeysInNode(t.root)
