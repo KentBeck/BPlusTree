@@ -6,27 +6,32 @@ import (
 )
 
 // PrintTree prints a visual representation of the tree
-func (t *BPlusTree) PrintTree() string {
+func PrintTree[K any](t *GenericBPlusTree[K]) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Tree(size=%d, height=%d, branching=%d)\n", t.size, t.Height(), t.branchingFactor))
-	t.printNode(&sb, t.root, 0)
+	printNode(&sb, t.root, 0)
 	return sb.String()
 }
 
 // printNode recursively prints a node and its children
-func (t *BPlusTree) printNode(sb *strings.Builder, node Node, level int) {
+func printNode[K any](sb *strings.Builder, node GenericNode[K], level int) {
 	indent := strings.Repeat("  ", level)
 
 	switch n := node.(type) {
-	case *LeafImpl:
+	case *GenericLeafNode[K]:
 		sb.WriteString(fmt.Sprintf("%sLeaf: %v\n", indent, n.Keys()))
-	case *BranchImpl:
+	case *GenericBranchNode[K]:
 		sb.WriteString(fmt.Sprintf("%sInternal: %v\n", indent, n.Keys()))
 		for i, child := range n.Children() {
 			if i > 0 {
-				sb.WriteString(fmt.Sprintf("%s[Key: %d]\n", indent, n.Keys()[i-1]))
+				sb.WriteString(fmt.Sprintf("%s[Key: %v]\n", indent, n.Keys()[i-1]))
 			}
-			t.printNode(sb, child, level+1)
+			printNode(sb, child, level+1)
 		}
 	}
+}
+
+// For backward compatibility with existing code
+func (t *GenericBPlusTree[uint64]) PrintTree() string {
+	return PrintTree(t)
 }
