@@ -558,7 +558,8 @@ func (t *BPlusTree[K]) collectKeys(node Node[K], keys *[]K) {
 	}
 }
 
-// RangeQuery returns all keys in the range [start, end]
+// RangeQuery returns all keys in the range [start, end)
+// This follows Go's slice conventions where the start is inclusive and the end is exclusive
 func (t *BPlusTree[K]) RangeQuery(start, end K) []K {
 	result := make([]K, 0)
 
@@ -572,11 +573,11 @@ func (t *BPlusTree[K]) RangeQuery(start, end K) []K {
 	for leaf != nil {
 		for _, key := range leaf.Keys() {
 			if (t.less(start, key) || t.equal(start, key)) &&
-				(t.less(key, end) || t.equal(key, end)) {
+				t.less(key, end) {
 				result = append(result, key)
 			}
 
-			if t.less(end, key) {
+			if !t.less(key, end) {
 				return result // We've reached the end
 			}
 		}

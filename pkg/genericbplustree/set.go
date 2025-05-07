@@ -111,7 +111,8 @@ func (s *Set[K]) SortedSlice() []K {
 	return result
 }
 
-// Range returns all elements in the range [start, end]
+// Range returns all elements in the range [start, end)
+// This follows Go's slice conventions where the start is inclusive and the end is exclusive
 func (s *Set[K]) Range(start, end K) []K {
 	return s.tree.RangeQuery(start, end)
 }

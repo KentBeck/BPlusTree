@@ -74,7 +74,7 @@ set.Delete(20)
 // Get all values in the set
 values := set.GetAll()
 
-// Get all values in a range
+// Get all values in a range [15, 25) - inclusive of 15, exclusive of 25
 rangeValues := set.Range(15, 25)
 
 // Get a sorted slice of all values
@@ -128,7 +128,7 @@ func main() {
     fmt.Println(set.Contains(20)) // Output: true
     fmt.Println(set.Contains(40)) // Output: false
 
-    // Get a range of values
+    // Get a range of values [15, 35) - inclusive of 15, exclusive of 35
     fmt.Println(set.Range(15, 35)) // Output: [20 30]
 
     // Delete a value

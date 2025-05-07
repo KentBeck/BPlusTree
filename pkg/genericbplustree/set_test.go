@@ -236,12 +236,12 @@ func TestSetRange(t *testing.T) {
 	set.Add(40)
 	set.Add(50)
 
-	// Test range query
+	// Test range query [15, 45) - inclusive of 15, exclusive of 45
 	result := set.Range(15, 45)
 
 	// Check result
 	if len(result) != 3 {
-		t.Errorf("Expected 3 values in range [15, 45], got %d", len(result))
+		t.Errorf("Expected 3 values in range [15, 45), got %d", len(result))
 	}
 
 	// Check values
