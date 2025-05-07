@@ -17,7 +17,6 @@ func minLeafKeys(branchingFactor int) int {
 type BPlusTree struct {
 	root            Node
 	branchingFactor int
-	height          int
 	size            int
 	bloomFilter     BloomFilterInterface
 }
@@ -47,7 +46,6 @@ func NewBPlusTreeWithOptions(branchingFactor int, useBloomFilter bool) *BPlusTre
 	return &BPlusTree{
 		root:            NewLeaf(),
 		branchingFactor: branchingFactor,
-		height:          1,
 		size:            0,
 		bloomFilter:     bloomFilter,
 	}
@@ -58,9 +56,25 @@ func (t *BPlusTree) Size() int {
 	return t.size
 }
 
-// Height returns the height of the tree
+// Height returns the height of the tree by calculating it on the fly
 func (t *BPlusTree) Height() int {
-	return t.height
+	return t.calculateHeight(t.root)
+}
+
+// calculateHeight calculates the height of the subtree rooted at node
+func (t *BPlusTree) calculateHeight(node Node) int {
+	if node.Type() == Leaf {
+		return 1
+	}
+
+	// For branch nodes, recursively calculate height of first child
+	// All children should have the same height in a balanced B+ tree
+	branchNode := node.(*BranchImpl)
+	if len(branchNode.Children()) == 0 {
+		return 1 // Empty branch node (shouldn't happen in a valid tree)
+	}
+
+	return 1 + t.calculateHeight(branchNode.Children()[0])
 }
 
 // Insert inserts a key into the tree
@@ -86,7 +100,8 @@ func (t *BPlusTree) splitRoot() {
 	newRoot := t.root.(*BranchImpl)
 	newRoot.SetChild(0, oldRoot)
 	t.splitChild(newRoot, 0)
-	t.height++
+	// Height increases automatically when the root is split
+	// No need to update a height field since we calculate it on demand
 }
 
 // updateBloomFilter adds a key to the bloom filter if it's valid
@@ -264,7 +279,8 @@ func (t *BPlusTree) isEmptyInternalRoot() bool {
 // promoteOnlyChild makes the only child of the root the new root
 func (t *BPlusTree) promoteOnlyChild() {
 	t.root = t.root.(*BranchImpl).Children()[0]
-	t.height--
+	// Height decreases automatically when the root's only child becomes the new root
+	// No need to update a height field since we calculate it on demand
 }
 
 // invalidateBloomFilter clears the bloom filter
@@ -488,7 +504,7 @@ func (t *BPlusTree) mergeWithRightInternal(node *BranchImpl, parent *BranchImpl,
 // String returns a string representation of the tree
 func (t *BPlusTree) String() string {
 	return fmt.Sprintf("BPlusTree(size=%d, height=%d, branchingFactor=%d)",
-		t.size, t.height, t.branchingFactor)
+		t.size, t.Height(), t.branchingFactor)
 }
 
 // SetBloomFilterParams sets the parameters for the Bloom filter
@@ -557,7 +573,6 @@ func (t *BPlusTree) collectKeys(node Node, keys *[]uint64) {
 func (t *BPlusTree) DeleteAll() {
 	// Reset the tree to an empty leaf node
 	t.root = NewLeaf()
-	t.height = 1
 	t.size = 0
 
 	// Invalidate the Bloom filter

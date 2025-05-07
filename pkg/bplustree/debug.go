@@ -8,7 +8,7 @@ import (
 // PrintTree prints a visual representation of the tree
 func (t *BPlusTree) PrintTree() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Tree(size=%d, height=%d, branching=%d)\n", t.size, t.height, t.branchingFactor))
+	sb.WriteString(fmt.Sprintf("Tree(size=%d, height=%d, branching=%d)\n", t.size, t.Height(), t.branchingFactor))
 	t.printNode(&sb, t.root, 0)
 	return sb.String()
 }
