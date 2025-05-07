@@ -49,3 +49,13 @@ func (s *Set) Clear() {
 func (s *Set) GetAll() []uint64 {
 	return s.genericSet.GetAll()
 }
+
+// Range returns all elements in the range [start, end]
+func (s *Set) Range(start, end uint64) []uint64 {
+	return s.genericSet.Range(start, end)
+}
+
+// SortedSlice returns all elements in the set as a sorted slice
+func (s *Set) SortedSlice() []uint64 {
+	return s.genericSet.SortedSlice()
+}

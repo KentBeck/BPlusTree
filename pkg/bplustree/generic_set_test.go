@@ -174,25 +174,7 @@ func TestGenericSetInt(t *testing.T) {
 
 // TestGenericSetString tests the GenericSet with string values
 func TestGenericSetString(t *testing.T) {
-	// Create a string set with custom conversion functions
-	set := NewGenericSet[string](
-		4,
-		func(s string) uint64 {
-			// Simple hash function for strings
-			var hash uint64
-			for i := 0; i < len(s); i++ {
-				hash = hash*31 + uint64(s[i])
-			}
-			return hash
-		},
-		func(hash uint64) string {
-			// We can't convert back from hash to string
-			// This is just a placeholder
-			return ""
-		},
-		func(a, b string) bool { return a < b },
-		func(a, b string) bool { return a == b },
-	)
+	set := NewStringSet(4)
 
 	// Add some values
 	if !set.Add("apple") {
@@ -242,5 +224,61 @@ func TestGenericSetString(t *testing.T) {
 	// Check size after deletion
 	if set.Size() != 2 {
 		t.Errorf("Expected size 2 after deletion, got %d", set.Size())
+	}
+}
+
+// TestGenericSetRange tests the Range method of GenericSet
+func TestGenericSetRange(t *testing.T) {
+	set := NewIntSet(4)
+
+	// Add some values
+	set.Add(10)
+	set.Add(20)
+	set.Add(30)
+	set.Add(40)
+	set.Add(50)
+
+	// Test range query
+	result := set.Range(15, 45)
+
+	// Check result
+	if len(result) != 3 {
+		t.Errorf("Expected 3 values in range [15, 45], got %d", len(result))
+	}
+
+	// Check values
+	expected := []int{20, 30, 40}
+	for i, v := range expected {
+		if i < len(result) && result[i] != v {
+			t.Errorf("Expected %d at position %d, got %d", v, i, result[i])
+		}
+	}
+}
+
+// TestGenericSetSortedSlice tests the SortedSlice method of GenericSet
+func TestGenericSetSortedSlice(t *testing.T) {
+	set := NewIntSet(4)
+
+	// Add some values in random order
+	set.Add(30)
+	set.Add(10)
+	set.Add(50)
+	set.Add(20)
+	set.Add(40)
+
+	// Get sorted slice
+	sorted := set.SortedSlice()
+
+	// Check result
+	if len(sorted) != 5 {
+		t.Errorf("Expected 5 values in sorted slice, got %d", len(sorted))
+	}
+
+	// Check order
+	expected := []int{10, 20, 30, 40, 50}
+	for i, v := range expected {
+		if i < len(sorted) && sorted[i] != v {
+			t.Errorf("Expected %d at position %d, got %d", v, i, sorted[i])
+		}
 	}
 }
