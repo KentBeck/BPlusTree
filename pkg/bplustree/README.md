@@ -8,7 +8,6 @@ This package provides a generic B+ tree implementation that can work with any ty
 - **Type Safety**: The generic implementation provides compile-time type checking for keys.
 - **Range Queries**: The B+ tree supports range queries, which return all keys in a given range.
 - **Bloom Filter**: The B+ tree uses a Bloom filter to optimize lookups of non-existent keys.
-- **Backward Compatibility**: The original API is still supported through a wrapper.
 
 ## Usage
 
@@ -79,32 +78,6 @@ rangeValues := set.Range(15, 25)
 
 // Get a sorted slice of all values
 sortedValues := set.SortedSlice()
-```
-
-### Using the Original API
-
-```go
-// Create a set of uint64 values
-set := NewSet(256)
-
-// Add values to the set
-set.Add(10)
-set.Add(20)
-set.Add(30)
-
-// Check if the set contains a value
-if set.Contains(20) {
-    fmt.Println("Set contains 20")
-}
-
-// Delete a value from the set
-set.Delete(20)
-
-// Get all values in the set
-values := set.GetAll()
-
-// Get all values in a range
-rangeValues := set.Range(15, 25)
 ```
 
 ## Performance

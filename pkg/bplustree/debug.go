@@ -30,8 +30,3 @@ func printNode[K any](sb *strings.Builder, node GenericNode[K], level int) {
 		}
 	}
 }
-
-// For backward compatibility with existing code
-func (t *GenericBPlusTree[uint64]) PrintTree() string {
-	return PrintTree(t)
-}
